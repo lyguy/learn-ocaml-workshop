@@ -1,5 +1,3 @@
-;; -*- scheme -*-
-
 (jbuild_version 1)
 
 (library
