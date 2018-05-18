@@ -9,7 +9,8 @@ open Expect_test_helpers_kernel
 *)
 
 (* In this function, we use [] and :: in a pattern match to break down
-   a list *)
+   a list. Note that we need the [rec] keyword to mark the function as
+   recursive. *)
 let rec length list =
   match list with
   | [] -> 0
