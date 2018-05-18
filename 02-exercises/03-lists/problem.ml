@@ -1,25 +1,19 @@
 open! Base
 open Expect_test_helpers_kernel
 
-(*
-   OCaml natively supports linked lists as part of the language.
-   Lists are commonly referred to as having heads and tails.
-   The head is the first element of the linked list
-   The tail is everything else.
+(* Singly-linked lists are a common enough data type that they have
+   some built-in syntactic support.
 
-   [] means "the empty list".
-   hd :: tl means "the element hd added to the front of the list tl".
-
-   When matching on a list, it's either empty or non-empty. To say it another way, it's
-   either equal to [] or equal to (hd :: tl) where hd is the first element of the list
-   and tl] is all the rest of the elements of the list (which may itself be empty).
+   In particular, [] means "the empty list", and hd :: tl means "the
+   element hd added to the front of the list tl".
 *)
 
-(* This function computes the length of a list. *)
+(* In this function, we use [] and :: in a pattern match to break down
+   a list *)
 let rec length list =
   match list with
   | [] -> 0
-  | _ :: tl -> 1 + (length tl)
+  | _ :: tail -> 1 + (length tail)
 
 (* EXERCISE: Uncomment this example and fill it out! *)
 (*
@@ -33,16 +27,21 @@ let%test_unit "sum" =
   [%test_eq: int] 0  (sum [5 ; -5 ; 1 ; -1])
 *)
 
-(* EXERCISE: Uncomment this example and fill it out! *)
+(* In this example, we also use [] and :: for constructing new list. *)
+let rec double_elements list =
+  match list with
+  | [] -> []
+  | head :: tail -> head * 2 :: double_elements tail
 
+(* EXERCISE: Uncomment this example and fill it out! *)
+(*
 (** [range lower upper] returns in sorted order all integers greater
    than or equal to [lower] and strictly less than [upper] *)
 let rec range l u =
-  if l >= u then []
-  else l :: range (l + 1) u
+  failwith "unimplemented"
 
 let%test_unit "range" =
-  let test l u expected = [%test_eq: int list] (range l u) expected in
-  test 1 4 [1;2;3];
-  test (-5) 3 [-5;-4;-3;-2;-1;0;1;2];
-  test 10 0 []
+  [%test_eq: int list] (range 1 4)    [1;2;3];
+  [%test_eq: int list] (range (-5) 3) [-5;-4;-3;-2;-1;0;1;2];
+  [%test_eq: int list] (range 10 0)   []
+*)
