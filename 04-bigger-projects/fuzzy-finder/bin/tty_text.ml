@@ -8,6 +8,8 @@ module User_input = struct
     | Backspace
     | Return (* Enter key *)
     | Char of char
+    | Up
+    | Down
   [@@deriving sexp_of]
 end
 
@@ -177,14 +179,60 @@ let with_rendering f =
           match%bind Reader.really_read ~len:1 tty_reader b with
           | `Eof _ -> return (`Finished ())
           | `Ok ->
-            match Char.to_int (Bytes.get b 0) with
+            let char = Char.to_int (Bytes.get b 0) in
+            Log.Global.sexp [%message "Character" (char : int)];
+            match char with
             | 3 (* CTRL + C *) ->
               let%bind () = Pipe.write w User_input.Ctrl_c in
               return (`Finished ())
-            | 0O177 -> repeat Backspace
-            | 0O015 -> repeat Return
-            | 0O33  -> repeat Escape
-            | _     -> repeat (Char (Bytes.get b 0))
+            | 0o177 -> repeat Backspace
+            | 0o015 -> repeat Return
+            | 0o033 ->
+              (* beginning of an escape sequence *)
+              begin
+                let b = Bytes.create 1 in
+                let next_read = Reader.really_read ~len:1 tty_reader b in
+                match%bind
+                  choose
+                    [ choice (next_read :> [`Eof of int | `Ok | `Timed_out] Deferred.t) Fn.id
+                    ; choice (Clock.after (sec 0.1)) (fun () -> `Timed_out) ]
+                with
+                | `Eof _ -> return (`Finished ())
+                | `Timed_out ->
+                  begin
+                    let%bind () = Pipe.write w Escape in
+                    match%bind next_read with
+                    | `Eof _ -> return (`Finished ())
+                    | `Ok -> return (`Finished ())
+                  end
+                | `Ok ->
+                  let char = Bytes.get b 0 in
+                  Log.Global.sexp [%message "Escape character" (char : char)];
+                  match char with
+                  | '[' ->
+                    begin
+                      let b = Bytes.create 1 in
+                      match%bind Reader.really_read ~len:1 tty_reader b with
+                      | `Eof _ -> return (`Finished ())
+                      | `Ok ->
+                        let char = Bytes.get b 0 in
+                        Log.Global.sexp [%message "Escape sequence" (char : char)];
+                        match char with
+                        | 'A' -> repeat Up
+                        | 'B' -> repeat Down
+                        | _ ->
+                          (* Skip unknown escape characters *)
+                          return (`Repeat ())
+                    end
+                  | char ->
+                    (* Send the escape key, ignore the following
+                       character if there is one. This is a bit of
+                       hack, but it's OK in this app because we shut
+                       down on escape *)
+                    repeat Escape
+              end
+            | _     ->
+              repeat (Char (Bytes.get b 0))
         )
       )
     in

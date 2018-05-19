@@ -32,6 +32,8 @@ module User_input : sig
     | Backspace
     | Return (* Enter key *)
     | Char of char
+    | Up
+    | Down
   [@@deriving sexp_of]
 end
 
