@@ -1,6 +1,13 @@
 open Core
 open Async
 
+module Dimensions = struct
+  type t =
+    { width  : int
+    ; height : int
+    }
+end
+
 module User_input = struct
   type t =
     | Ctrl_c
@@ -119,11 +126,13 @@ let do_action writer action =
 ;;
 
 type t =
-  { dimensions : Screen_dimensions.t
+  { dimensions : Dimensions.t
   ; writer     : Writer.t
   }
 
-let screen_dimensions { dimensions; _} = dimensions
+let dimensions t =
+  t.dimensions
+;;
 
 let stop_rendering t =
   do_action t Switch_from_alternate_buffer
@@ -151,7 +160,7 @@ let with_rendering f =
       |> String.split ~on:' '
     with
     | [height;width] ->
-      { Screen_dimensions.
+      { Dimensions.
         height = Int.of_string height
       ; width = Int.of_string width
       }

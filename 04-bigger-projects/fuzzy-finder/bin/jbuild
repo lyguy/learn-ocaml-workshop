@@ -1,14 +1,6 @@
 (executables (
   (names (fuzzy))
-  (libraries (core async re))
+  (libraries (core async tty_text re))
   (preprocess (pps (ppx_jane)))
   (flags (:standard -short-paths))
 ))
-
-(alias
- ((name DEFAULT)
-   (deps (fuzzy.exe))))
-
-(alias
- ((name all)
-  (deps ((glob_files *.exe)))))

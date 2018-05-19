@@ -12,7 +12,7 @@ module Model = struct
     { items: string Map.M(Int).t
     ; filter: string
     ; closed: bool
-    ; dim: Screen_dimensions.t
+    ; dim: Tty_text.Dimensions.t
     }
 
   let empty =
@@ -119,7 +119,7 @@ let run user_input tty_text ~start =
        if not !dirty then Deferred.unit
        else (
          dirty := false;
-         let dim = Tty_text.screen_dimensions tty_text in
+         let dim = Tty_text.dimensions tty_text in
          model_ref := { !model_ref with dim };
          Tty_text.render tty_text (Model.view !model_ref ~start ~now:(Time.now ()))));
   finished

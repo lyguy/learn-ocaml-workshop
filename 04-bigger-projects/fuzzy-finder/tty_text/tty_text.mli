@@ -25,6 +25,11 @@ module Widget : sig
   val vbox : t list -> t
 end
 
+module Dimensions : sig
+  type t = { width: int
+           ; height: int }
+end
+
 module User_input : sig
   type t =
     | Ctrl_c
@@ -44,9 +49,9 @@ val with_rendering
   :  ((User_input.t Pipe.Reader.t * t) -> 'a Deferred.t)
   -> 'a Deferred.t
 
-(** [screen_dimensions t] returns the terminal dimensions that were
+(** [dimensions t] returns the terminal dimensions that were
     determined when [with_rendering] was invoked. *)
-val screen_dimensions : t -> Screen_dimensions.t
+val dimensions : t -> Dimensions.t
 
 (** [render t w] requests that the widget [w] be rendered upon the screen.
     There is no horizontal or vertical alignment performed; the screen
