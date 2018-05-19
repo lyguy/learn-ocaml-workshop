@@ -6,7 +6,6 @@ open Async
    really it should be the selection *)
 (* TODO: Make incremental version *)
 (* TODO: Show filter count *)
-(* TODO: Handle over-long lines *)
 
 module Model = struct
   type t =
@@ -38,6 +37,8 @@ module Model = struct
       Map.to_sequence matches
       |> (fun matches -> Sequence.take matches (t.dim.height - 1))
       |> Sequence.map ~f:snd
+      |> Sequence.map ~f:(fun s ->
+          String.sub s ~pos:0 ~len:(Int.min (String.length s) t.dim.width))
       |> Sequence.to_list
     in
     let prompt = Widget.text ("> " ^ t.filter) in
