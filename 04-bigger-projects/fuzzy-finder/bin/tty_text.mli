@@ -14,16 +14,16 @@ type t
 module Widget : sig
   type t
 
-  val text : string -> t
+  val of_char : char -> t
 
-  (** [horizontal_group ts] will perform a horizontal grouping without a line break
-      (just a space) between each [t]. *)
-  val horizontal_group : t list -> t
+  val of_string : string -> t
 
-  (** [vertical_group ts] will insert line breaks between each [t] in [ts]. *)
-  val vertical_group : t list -> t
+  (** [hbox ts] stacks widgets horizontally, aligned to the top. *)
+  val hbox : t list -> t
+
+  (** [vbox ts] stacks widgets vertically, aligned to the left. *)
+  val vbox : t list -> t
 end
-
 
 module User_input : sig
   type t =

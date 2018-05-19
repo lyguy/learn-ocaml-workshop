@@ -41,18 +41,18 @@ module Model = struct
           String.sub s ~pos:0 ~len:(Int.min (String.length s) t.dim.width))
       |> Sequence.to_list
     in
-    let prompt = Widget.text ("> " ^ t.filter) in
+    let prompt = Widget.of_string ("> " ^ t.filter) in
     let extra_lines = t.dim.height - 1 - List.length matches_to_display in
     let spinner =
       if t.closed then []
       else
-        [ Widget.text (String.of_char (Spinner.char ~spin_every:(sec 0.5) ~start ~now))
-        ; Widget.text " "]
+        [ Widget.of_string (String.of_char (Spinner.char ~spin_every:(sec 0.5) ~start ~now))
+        ; Widget.of_string " "]
     in
-    Widget.vertical_group
-      (List.init extra_lines ~f:(fun _ -> Widget.text "")
-       @ List.map matches_to_display ~f:Widget.text
-       @ [ Widget.horizontal_group (spinner @ [prompt])])
+    Widget.vbox
+      (List.init extra_lines ~f:(fun _ -> Widget.of_string "")
+       @ List.map matches_to_display ~f:Widget.of_string
+       @ [ Widget.hbox (spinner @ [prompt])])
 end
 
 module Action = struct

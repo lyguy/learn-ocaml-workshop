@@ -15,10 +15,10 @@ end
 
 module Configure_terminal = struct
 
-  type t = {
-    attr_in : Unix.Terminal_io.t;
-    attr_out: Unix.Terminal_io.t;
-  }
+  type t =
+    { attr_in : Unix.Terminal_io.t
+    ; attr_out: Unix.Terminal_io.t
+    }
 
   let setattr_out fd ~attr_out =
     Unix.Terminal_io.tcsetattr
@@ -35,10 +35,7 @@ module Configure_terminal = struct
   let get_current_settings ~input ~output () =
     let%bind attr_in  = Unix.Terminal_io.tcgetattr input in
     let%bind attr_out = Unix.Terminal_io.tcgetattr output in
-    return {
-      attr_in = attr_in;
-      attr_out = attr_out;
-    }
+    return { attr_in; attr_out }
 
   let set ~input ~output t =
     let%bind () = setattr_in  input  ~attr_in:t.attr_in   in
@@ -224,7 +221,7 @@ let with_rendering f =
                           (* Skip unknown escape characters *)
                           return (`Repeat ())
                     end
-                  | char ->
+                  | _ ->
                     (* Send the escape key, ignore the following
                        character if there is one. This is a bit of
                        hack, but it's OK in this app because we shut
@@ -245,20 +242,21 @@ let with_rendering f =
 
 module Widget = struct
   type t =
-    | Text of string
-    | Group_horizontally of t list
-    | Stack_vertically of t list
+    | String of string
+    | Hbox of t list
+    | Vbox of t list
 
-  let text text = Text text
-  let horizontal_group ts = Group_horizontally ts
-  let vertical_group ts = Stack_vertically ts
+  let of_char c = String (String.of_char c)
+  let of_string s = String s
+  let hbox ts = Hbox ts
+  let vbox ts = Vbox ts
 
   let render elts writer =
     let rec process = function
-      | Text x -> Writer.writef writer "%s" x
-      | Group_horizontally xs ->
+      | String x -> Writer.writef writer "%s" x
+      | Hbox xs ->
         List.iter xs ~f:process
-      | Stack_vertically xs ->
+      | Vbox xs ->
         xs
         |> List.map ~f:(fun x -> (fun () -> process x))
         |> List.intersperse ~sep:(fun () ->
