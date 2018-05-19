@@ -1,6 +1,7 @@
 open Core
 open Async
 
+(* TODO: Fix selection: now the last filtered thing is shown, but really it should be the selection  *)
 (* TODO: Make incremental version *)
 (* TODO: Show filter count *)
 (* TODO: Handle over-long lines *)
@@ -38,14 +39,15 @@ module Model = struct
     let prompt = Widget.text ("> " ^ t.filter) in
     let extra_lines = dim.height - 1 - List.length matches_to_display in
     let spinner =
-      if t.closed then Widget.text " "
+      if t.closed then []
       else
-        Widget.text (String.of_char (Spinner.char ~spin_every:(sec 0.5) ~start ~now))
+        [ Widget.text (String.of_char (Spinner.char ~spin_every:(sec 0.5) ~start ~now))
+        ; Widget.text " "]
     in
     Widget.vertical_group
       (List.init extra_lines ~f:(fun _ -> Widget.text "")
        @ List.map matches_to_display ~f:Widget.text
-       @ [ Widget.horizontal_group [spinner; Widget.text " "; prompt]])
+       @ [ Widget.horizontal_group (spinner @ [prompt])])
 end
 
 module Action = struct
@@ -99,7 +101,7 @@ let run user_input tty_text ~start =
           Ivar.fill finished None
         | Some Exit_and_print ->
           let matches = Model.matches !model_ref in
-          match (Map.max_elt matches) with
+          match Map.min_elt matches with
           | None ->
             Ivar.fill finished None
           | Some (_,line) ->
