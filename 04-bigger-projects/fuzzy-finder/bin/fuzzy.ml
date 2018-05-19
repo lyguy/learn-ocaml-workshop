@@ -1,9 +1,7 @@
 open Core
 open Async
 
-(* TODO: Add spinner back in *)
 (* TODO: Make incremental version *)
-(* TODO: Show line numbers, maybe? *)
 (* TODO: Show filter count *)
 (* TODO: Handle over-long lines *)
 
@@ -28,7 +26,7 @@ module Model = struct
       Map.filter t.items ~f:(fun line ->
           Option.is_some (String.Search_pattern.index pattern ~in_:line))
 
-  let view t (dim : Screen_dimensions.t) =
+  let view t (dim : Screen_dimensions.t) ~start ~now =
     let open Tty_text in
     let matches = matches t in
     let matches_to_display =
@@ -39,10 +37,15 @@ module Model = struct
     in
     let prompt = Widget.text ("> " ^ t.filter) in
     let extra_lines = dim.height - 1 - List.length matches_to_display in
+    let spinner =
+      if t.closed then Widget.text " "
+      else
+        Widget.text (String.of_char (Spinner.char ~spin_every:(sec 0.5) ~start ~now))
+    in
     Widget.vertical_group
       (List.init extra_lines ~f:(fun _ -> Widget.text "")
        @ List.map matches_to_display ~f:Widget.text
-       @ [prompt])
+       @ [ Widget.horizontal_group [spinner; Widget.text " "; prompt]])
 end
 
 module Action = struct
@@ -73,7 +76,7 @@ let handle_line (m:Model.t) line =
 let handle_closed (m:Model.t) =
   { m with closed = true }
 
-let run user_input tty_text =
+let run user_input tty_text ~start =
   let stdin = force Reader.stdin in
   let model_ref = ref Model.empty in
   let dirty = ref true in
@@ -108,7 +111,7 @@ let run user_input tty_text =
        else (
          dirty := false;
          let dim = Tty_text.screen_dimensions tty_text in
-         Tty_text.render tty_text (Model.view !model_ref dim)));
+         Tty_text.render tty_text (Model.view !model_ref dim ~start ~now:(Time.now ()))));
   finished
 ;;
 
@@ -117,10 +120,11 @@ let command =
   Command.async ~summary:"Custom fzf"
     (let%map_open () = return () in
      fun () ->
+       let start = Time.now () in
        let open Deferred.Let_syntax in
        match%bind
          Tty_text.with_rendering (fun (input, tty_text) ->
-             run input tty_text)
+             run input tty_text ~start)
        with
        | None -> Deferred.unit
        | Some output ->
