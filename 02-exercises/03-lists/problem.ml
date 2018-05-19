@@ -20,7 +20,7 @@ let rec length list =
 (*
 (** [sum list] returns the sum of all integers on [list] *)
 let rec sum list =
-  failwith "For you to implement"
+  failwith "unimplemented"
 
 let%test_unit "sum" =
   [%test_eq: int] 0  (sum []);
@@ -29,10 +29,14 @@ let%test_unit "sum" =
 *)
 
 (* In this example, we also use [] and :: for constructing new list. *)
-let rec double_elements list =
+let rec double list =
   match list with
   | [] -> []
-  | head :: tail -> head * 2 :: double_elements tail
+  | head :: tail -> head * 2 :: double tail
+
+let%expect_test _ =
+  print_s [%sexp (double [1;2;3;4] : int list)];
+  [%expect{| (2 4 6 8) |}]
 
 (* EXERCISE: Uncomment this example and fill it out! *)
 (*

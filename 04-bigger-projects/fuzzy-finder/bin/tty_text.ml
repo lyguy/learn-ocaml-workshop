@@ -216,7 +216,8 @@ module Widget = struct
       | Stack_vertically xs ->
         xs
         |> List.map ~f:(fun x -> (fun () -> process x))
-        |> List.intersperse ~sep:(fun () -> Writer.writef writer !"%{Action}%{Action}" Erase_to_end_of_line Next_line)
+        |> List.intersperse ~sep:(fun () ->
+            Writer.writef writer !"%{Action}%{Action}" Erase_to_end_of_line Next_line)
         |> List.iter ~f:(fun f -> f ())
     in
     Writer.writef writer !"%{Action}" Move_cursor_to_home;
