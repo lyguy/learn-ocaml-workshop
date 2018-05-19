@@ -10,7 +10,7 @@ module Model : sig
   (** Returns the set of lines that currently match *)
   val matches : t -> string Map.M(Int).t
 
-  val to_widget : t -> now:Core_kernel.Time.t -> Tty_text.Widget.t
+  val to_widget : t Incr.t -> Tty_text.Widget.t Incr.t
 end
 
 (** The set of things that the application can ask to do. *)

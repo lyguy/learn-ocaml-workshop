@@ -1,44 +1,53 @@
 open Core
+open Import
 open Async
 
+
 let run user_input tty_text =
+  let (!) = Incr.Var.value in
+  let (:=) = Incr.Var.set in
   let now = Time.now () in
   let stdin = force Reader.stdin in
-  let model_ref = ref (Fuzzy.Model.create ~now) in
-  let dirty = ref true in
+  let model_v = Incr.Var.create (Fuzzy.Model.create ~now) in
+  let widget = Fuzzy.Model.to_widget (Incr.Var.watch model_v) in
   let finished = Ivar.create () in
   don't_wait_for (
     Pipe.iter_without_pushback (Reader.lines stdin) ~f:(fun line ->
-        dirty := true;
-        model_ref := Fuzzy.handle_line !model_ref line));
+        model_v := Fuzzy.handle_line !model_v line));
   upon (Reader.close_finished stdin) (fun () ->
-      dirty := true;
-      model_ref := Fuzzy.handle_closed !model_ref);
+      model_v := Fuzzy.handle_closed !model_v);
   don't_wait_for (
     Pipe.iter_without_pushback user_input ~f:(fun input ->
-        dirty := true;
-        let (model,action) = Fuzzy.handle_user_input !model_ref input in
-        model_ref := model;
+        let (model,action) = Fuzzy.handle_user_input !model_v input in
+        model_v := model;
         match action with
         | None -> ()
         | Some Exit ->
           Ivar.fill finished None
         | Some Exit_and_print ->
-          let matches = Fuzzy.Model.matches !model_ref in
+          let matches = Fuzzy.Model.matches !model_v in
           match Map.min_elt matches with
           | None ->
             Ivar.fill finished None
           | Some (_,line) ->
             Ivar.fill finished (Some line)));
   let finished = Ivar.read finished in
+  let widget_to_render = ref None in
+  Incr.Observer.on_update_exn (Incr.observe widget)
+    ~f:(function
+        | Initialized widget | Changed (_, widget) -> Ref.(widget_to_render := Some widget)
+        | Invalidated -> assert false);
   Clock.every' (sec 0.1) ~stop:(Deferred.ignore finished)
     (fun () ->
-       if not !dirty then Deferred.unit
-       else (
-         dirty := false;
-         let dim = Tty_text.dimensions tty_text in
-         model_ref := Fuzzy.set_dim !model_ref dim;
-         Tty_text.render tty_text (Fuzzy.Model.to_widget !model_ref ~now:(Time.now ()))));
+       let dim = Tty_text.dimensions tty_text in
+       model_v := Fuzzy.set_dim !model_v dim;
+       Incr.advance_clock ~to_:(Time.now ());
+       Incr.stabilize ();
+       match Ref.(!widget_to_render) with
+       | None -> Deferred.unit
+       | Some widget ->
+         Ref.(widget_to_render := None);
+         Tty_text.render tty_text widget);
   finished
 ;;
 
@@ -64,4 +73,5 @@ let command =
          print_endline output;
          Writer.flushed (force Writer.stdout))
 
-let () = Command.run command
+let () =
+  Command.run command

@@ -32,7 +32,10 @@ module Model = struct
       Map.filter t.items ~f:(fun line ->
           Option.is_some (String.Search_pattern.index pattern ~in_:line))
 
-  let to_widget t ~now =
+  let to_widget t =
+    let open Incr.Let_syntax in
+    let%map t = t in
+    let now = Incr.now () in
     let open Tty_text in
     let matches = matches t in
     let matches_to_display =
