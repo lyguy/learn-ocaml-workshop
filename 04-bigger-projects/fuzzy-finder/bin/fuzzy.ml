@@ -1,148 +1,115 @@
 open Core
 open Async
 
-type t =
-  { mutable items : string list
-  ; mutable filtered_items : string list
-  ; mutable selected : string option
-  ; spinner : Spinner.t
-  ; mutable entered_text : string option
-  }
+(* TODO: Add spinner back in *)
+(* TODO: Make incremental version *)
+(* TODO: Show line numbers, maybe? *)
+(* TODO: Show filter count *)
+(* TODO: Handle over-long lines *)
 
-let create () =
-  { items = []
-  ; filtered_items = []
-  ; selected = None
-  ; spinner = Spinner.create ~spin_every:(sec 0.2)
-  ; entered_text = None
-  }
-;;
+module Model = struct
+  type t =
+    { items: string Map.M(Int).t
+    ; filter: string
+    ; closed: bool
+    }
 
-let filter_items_and_selection t entered_text =
-  let { items; filtered_items = _; selected = _; spinner = _; entered_text = _} = t in
-  t.entered_text <- entered_text;
-  let filtered_items =
-    match entered_text with
-    | None -> items
-    | Some text ->
-      let pattern = String.Search_pattern.create text in
-      items
-      |> List.rev
-      |> List.filter ~f:(fun item ->
-        Option.is_some (String.Search_pattern.index ~in_:item pattern))
-  in
-  let filtered_items, selected =
-    match filtered_items with
-    | selection :: filtered_items -> (filtered_items, Some selection)
-    | [] -> ([], None)
-  in
-  t.filtered_items <- filtered_items;
-  t.selected <- selected;
-;;
+  let empty =
+    { items = Map.empty (module Int)
+    ; filter = ""
+    ; closed = false
+    }
 
-let widget t screen =
-  let open Tty_text in
-  let { items = _; filtered_items; selected; spinner; entered_text } = t in
-  let filtered_items = List.rev filtered_items in
-  let prompt_size = 1 in
-  let item_count = screen.Screen_dimensions.height - prompt_size in
-  let everything_but_selection =
-    List.take filtered_items item_count
-  in
-  let editor =
-    Widget.text ("> " ^ (Option.value ~default:"" entered_text))
-  in
-  let lines = List.map everything_but_selection ~f:Widget.text in
-  let selected = Option.map ~f:Widget.text selected in
-  let spinner =
-    Option.map (Spinner.to_char spinner) ~f:(fun c ->
-        Widget.text (String.of_char c))
-  in
-  let prompt =
-    [ spinner; Some editor]
-    |> List.filter_opt
-    |> Widget.horizontal_group
-  in
-  let padding =
-    List.init (item_count - List.length everything_but_selection)
-      ~f:(fun _ -> Widget.text "")
-  in
-  Widget.vertical_group
-    (padding
-     @ lines
-     @ List.filter_opt [selected]
-     @ [prompt])
-;;
+  let matches t =
+    match t.filter with
+    | "" -> t.items
+    | _ ->
+      let pattern = String.Search_pattern.create t.filter in
+      Map.filter t.items ~f:(fun line ->
+          Option.is_some (String.Search_pattern.index pattern ~in_:line))
 
-let handle_input t (input:Tty_text.User_input.t) =
+  let view t (dim : Screen_dimensions.t) =
+    let open Tty_text in
+    let matches = matches t in
+    let matches_to_display =
+      Map.to_sequence matches
+      |> (fun matches -> Sequence.take matches (dim.height - 1))
+      |> Sequence.map ~f:snd
+      |> Sequence.to_list
+    in
+    let prompt = Widget.text ("> " ^ t.filter) in
+    let extra_lines = dim.height - 1 - List.length matches_to_display in
+    Widget.vertical_group
+      (List.init extra_lines ~f:(fun _ -> Widget.text "")
+       @ List.map matches_to_display ~f:Widget.text
+       @ [prompt])
+end
+
+module Action = struct
+  type t =
+    | Exit
+    | Exit_and_print
+end
+
+let handle_user_input (m:Model.t) (input:Tty_text.User_input.t) =
   match input with
   | Backspace ->
-    begin match t.entered_text with
-     | None -> `Continue t
-     | Some text ->
-       let new_entered_text =
-         match String.drop_suffix text 1 with
-         | "" -> None
-         | s -> Some s
-       in
-       filter_items_and_selection t new_entered_text;
-       `Continue t
-    end
+    let m = { m with filter = String.drop_suffix m.filter 1 } in
+    (m,None)
   | Char x ->
-    let text = Option.value ~default:"" t.entered_text ^ String.of_char x in
-    filter_items_and_selection t (Some text);
-    `Continue t
-  | Return -> `Finished t.selected
-  | Escape -> `Finished None
-  | Ctrl_c -> `Finished None
-;;
+    let m = { m with filter = m.filter ^ String.of_char x } in
+    (m,None)
+  | Return -> (m,Some Action.Exit_and_print)
+  | Escape | Ctrl_c -> (m, Some Action.Exit)
 
-let run user_input tty_text stdin =
-  let stdin_reader = Pipe.map ~f:(fun x -> `Stdin x) (Reader.lines stdin) in
-  let stdin_closed =
-    Pipe.create_reader ~close_on_exception:true (fun w ->
-      let%bind _ = Reader.close_finished stdin in
-      Pipe.write w `Stdin_closed)
+let handle_line (m:Model.t) line =
+  let lnum =
+    match Map.max_elt m.items with
+    | None -> 1
+    | Some (num,_) -> num + 1
   in
-  let interleaved =
-    Pipe.interleave
-      [ stdin_reader
-      ; Pipe.map user_input ~f:(fun x -> `Input x)
-      ; stdin_closed
-      ]
-  in
-  let t = create () in
-  let last_rendered : (string option * (string list)) ref = ref (None, []) in
-  Render.every
-    ~how_often_to_render:(sec 0.1)
-    ~render:(fun () ->
-        if ([%compare.equal: string option * string list]
-              !last_rendered (t.entered_text, t.filtered_items))
-        then Deferred.unit
-        else begin
-          last_rendered := (t.entered_text, t.filtered_items);
-          Tty_text.render tty_text (widget t (Tty_text.screen_dimensions tty_text))
-        end
-      )
+  { m with items = Map.set m.items ~key:lnum ~data:line }
+
+let handle_closed (m:Model.t) =
+  { m with closed = true }
+
+let run user_input tty_text =
+  let stdin = force Reader.stdin in
+  let model_ref = ref Model.empty in
+  let dirty = ref true in
+  let finished = Ivar.create () in
+  don't_wait_for (
+    Pipe.iter_without_pushback (Reader.lines stdin) ~f:(fun line ->
+        dirty := true;
+        model_ref := handle_line !model_ref line));
+  upon (Reader.close_finished stdin) (fun () ->
+      dirty := true;
+      model_ref := handle_closed !model_ref);
+  don't_wait_for (
+    Pipe.iter_without_pushback user_input ~f:(fun input ->
+        dirty := true;
+        let (model,action) = handle_user_input !model_ref input in
+        model_ref := model;
+        match action with
+        | None -> ()
+        | Some Exit ->
+          Ivar.fill finished None
+        | Some Exit_and_print ->
+          let matches = Model.matches !model_ref in
+          match (Map.max_elt matches) with
+          | None ->
+            Ivar.fill finished None
+          | Some (_,line) ->
+            Ivar.fill finished (Some line)));
+  let finished = Ivar.read finished in
+  Clock.every' (sec 0.1) ~stop:(Deferred.ignore finished)
     (fun () ->
-       match%bind Pipe.read interleaved with
-       | `Eof -> raise_s [%message "impossible?"]
-       | `Ok `Stdin_closed ->
-         Spinner.finish t.spinner;
-         return (`Repeat ());
-       | `Ok `Stdin x ->
-         t.items <- x :: t.items;
-         filter_items_and_selection t t.entered_text;
-         return (`Repeat ());
-       | `Ok `Input user_input ->
-         match handle_input t user_input with
-         | `Finished None ->
-           return (`Finished None)
-         | `Finished (Some x) ->
-           return (`Finished (Some x))
-         | `Continue _ ->
-           return (`Repeat ())
-    )
+       if not !dirty then Deferred.unit
+       else (
+         dirty := false;
+         let dim = Tty_text.screen_dimensions tty_text in
+         Tty_text.render tty_text (Model.view !model_ref dim)));
+  finished
 ;;
 
 let command =
@@ -151,15 +118,13 @@ let command =
     (let%map_open () = return () in
      fun () ->
        let open Deferred.Let_syntax in
-       let stdin = force Reader.stdin   in
        match%bind
          Tty_text.with_rendering (fun (input, tty_text) ->
-             run input tty_text stdin)
+             run input tty_text)
        with
        | None -> Deferred.unit
        | Some output ->
-         let stdout = force Writer.stdout in
-         Writer.write_line stdout output;
-         Writer.flushed stdout)
+         print_endline output;
+         Writer.flushed (force Writer.stdout))
 
 let () = Command.run command

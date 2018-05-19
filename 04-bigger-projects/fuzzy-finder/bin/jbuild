@@ -1,7 +1,8 @@
 (executables (
   (names (fuzzy))
-  (libraries (core async))
+  (libraries (core async re))
   (preprocess (pps (ppx_jane)))
+  (flags (:standard -short-paths))
 ))
 
 (alias

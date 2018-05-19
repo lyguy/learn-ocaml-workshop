@@ -144,10 +144,7 @@ let with_rendering f =
       Process.run_exn ()
         ~prog:"stty"
         (* NOTE: for people on Mac OS X, use ~args:[ "-f"; "/dev/tty"; "size" ] *)
-        ~args:[ "size"
-              ; "-F"
-              ; "/dev/tty"
-              ]
+        ~args:[ "size"; "-F"; "/dev/tty" ]
     in
     match
       output
