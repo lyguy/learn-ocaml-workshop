@@ -1,12 +1,6 @@
 open! Base
 open Import
 
-(* TODO: Consider flipping direction to match ordinary fzf behavior *)
-(* TODO: Fix selection: now the last filtered thing is shown, but
-   really it should be the selection *)
-(* TODO: Make incremental version *)
-(* TODO: Show filter count *)
-
 module Model = struct
   type t =
     { items: string Map.M(Int).t
@@ -23,11 +17,8 @@ module Model = struct
     }
 
   let matches t =
-    match t.filter with
-    | "" -> t.items
-    | _ ->
-      let re = Re.compile (Re.str t.filter) in
-      Map.filter t.items ~f:(fun line -> Re.execp re line)
+    let re = Re.compile (Re.str t.filter) in
+    Map.filter t.items ~f:(fun line -> Re.execp re line)
 
   let to_widget t ~start ~now =
     let open Tty_text in

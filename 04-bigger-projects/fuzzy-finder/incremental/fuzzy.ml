@@ -2,12 +2,6 @@ open! Base
 open! Import
 open Incr.Let_syntax
 
-(* TODO: Consider flipping direction to match ordinary fzf behavior *)
-(* TODO: Fix selection: now the last filtered thing is shown, but
-   really it should be the selection *)
-(* TODO: Make incremental version *)
-(* TODO: Show filter count *)
-
 module Model = struct
   type t =
     { items: string Map.M(Int).t
@@ -25,22 +19,20 @@ module Model = struct
     ; start = now
     }
 
-  let matches t =
-    let filter = t >>| filter in
-    let items = t >>| items in
-    match%bind filter with
-    | "" -> items
-    | filter ->
-      let re = Re.compile (Re.str filter) in
-      Incr_map.filter_mapi items ~f:(fun ~key:_ ~data:line ->
-          if Re.execp re line then Some line else None)
+  let matches ~filter ~items =
+    let%bind filter = filter in
+    let re = Re.compile (Re.str filter) in
+    Incr_map.filter_mapi items ~f:(fun ~key:_ ~data:line ->
+        if Re.execp re line then Some line else None)
 
   let widget_and_selected t =
     let open Incr.Let_syntax in
-    let open Tty_text in
+    let module Widget = Tty_text.Widget in
     let dim = t >>| dim in
+    let filter = t >>| filter in
+    let items = t >>| items in
     let matches_to_display =
-      let%map matches = matches t and dim = dim in
+      let%map matches = matches ~filter ~items and dim = dim in
       Map.to_sequence matches
       |> (fun matches -> Sequence.take matches (dim.height - 1))
       |> Sequence.map ~f:snd
@@ -59,12 +51,16 @@ module Model = struct
     in
     let%map matches_to_display = matches_to_display
     and spinner = spinner
-    and filter = t >>| filter
+    and filter = filter
     and dim = dim
     in
     let prompt = Widget.of_string ("> " ^ filter) in
     let extra_lines = dim.height - 1 - List.length matches_to_display in
     let selected = List.hd matches_to_display in
+    let matches_to_display =
+      List.map matches_to_display ~f:(fun s ->
+          String.sub s ~pos:0 ~len:(min dim.width (String.length s)))
+    in
     let widget =
       Widget.vbox
         (List.init extra_lines ~f:(fun _ -> Widget.of_string "")

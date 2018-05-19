@@ -4,18 +4,14 @@ open Async
 let run user_input tty_text ~start =
   let stdin = force Reader.stdin in
   let model_ref = ref Fuzzy.Model.empty in
-  let dirty = ref true in
   let finished = Ivar.create () in
   don't_wait_for (
     Pipe.iter_without_pushback (Reader.lines stdin) ~f:(fun line ->
-        dirty := true;
         model_ref := Fuzzy.handle_line !model_ref line));
   upon (Reader.close_finished stdin) (fun () ->
-      dirty := true;
       model_ref := Fuzzy.handle_closed !model_ref (Time.now ()));
   don't_wait_for (
     Pipe.iter_without_pushback user_input ~f:(fun input ->
-        dirty := true;
         let (model,action) = Fuzzy.handle_user_input !model_ref input in
         model_ref := model;
         match action with
@@ -32,12 +28,9 @@ let run user_input tty_text ~start =
   let finished = Ivar.read finished in
   Clock.every' (sec 0.1) ~stop:(Deferred.ignore finished)
     (fun () ->
-       if not !dirty then Deferred.unit
-       else (
-         dirty := false;
-         let dim = Tty_text.dimensions tty_text in
-         model_ref := Fuzzy.set_dim !model_ref dim;
-         Tty_text.render tty_text (Fuzzy.Model.to_widget !model_ref ~start ~now:(Time.now ()))));
+       let dim = Tty_text.dimensions tty_text in
+       model_ref := Fuzzy.set_dim !model_ref dim;
+       Tty_text.render tty_text (Fuzzy.Model.to_widget !model_ref ~start ~now:(Time.now ())));
   finished
 ;;
 

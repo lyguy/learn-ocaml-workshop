@@ -11,10 +11,8 @@ let run user_input tty_text =
   let widget_and_selected = Fuzzy.Model.widget_and_selected (Incr.Var.watch model_v) in
   let finished = Ivar.create () in
   don't_wait_for (
-    Pipe.iter' (Reader.lines stdin) ~f:(fun lines ->
-        Queue.iter lines ~f:(fun line ->
-            model_v := Fuzzy.handle_line !model_v line);
-        Deferred.unit));
+    Pipe.iter_without_pushback (Reader.lines stdin) ~f:(fun line ->
+        model_v := Fuzzy.handle_line !model_v line));
   upon (Reader.close_finished stdin) (fun () ->
       model_v := Fuzzy.handle_closed !model_v (Incr.now ()));
   let widget_to_render = ref None in
@@ -22,8 +20,7 @@ let run user_input tty_text =
   Incr.Observer.on_update_exn (Incr.observe widget_and_selected)
     ~f:(function
         | Initialized (widget,selected) | Changed (_, (widget,selected)) ->
-          Ref.(widget_to_render := Some widget;
-               last_selected := selected)
+          Ref.(widget_to_render := Some widget; last_selected := selected)
         | Invalidated -> assert false);
   don't_wait_for (
     Pipe.iter_without_pushback user_input ~f:(fun input ->
