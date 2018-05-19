@@ -1,5 +1,5 @@
 open! Base
-module Time = Core_kernel.Time
+open Import
 
 (* TODO: Consider flipping direction to match ordinary fzf behavior *)
 (* TODO: Fix selection: now the last filtered thing is shown, but
@@ -11,14 +11,14 @@ module Model = struct
   type t =
     { items: string Map.M(Int).t
     ; filter: string
-    ; closed: bool
+    ; closed_at: Time.t option
     ; dim: Tty_text.Dimensions.t
     }
 
   let empty =
     { items = Map.empty (module Int)
     ; filter = ""
-    ; closed = false
+    ; closed_at = None
     ; dim = { width = 80; height = 40 }
     }
 
@@ -26,9 +26,8 @@ module Model = struct
     match t.filter with
     | "" -> t.items
     | _ ->
-      let pattern = String.Search_pattern.create t.filter in
-      Map.filter t.items ~f:(fun line ->
-          Option.is_some (String.Search_pattern.index pattern ~in_:line))
+      let re = Re.compile (Re.str t.filter) in
+      Map.filter t.items ~f:(fun line -> Re.execp re line)
 
   let to_widget t ~start ~now =
     let open Tty_text in
@@ -44,8 +43,11 @@ module Model = struct
     let prompt = Widget.of_string ("> " ^ t.filter) in
     let extra_lines = t.dim.height - 1 - List.length matches_to_display in
     let spinner =
-      if t.closed then []
-      else
+      match t.closed_at with
+      | Some closed_at ->
+        [ Widget.of_string (Time.Span.to_string (Time.diff closed_at start))
+        ; Widget.of_string " "]
+      | None ->
         [ Widget.of_string (String.of_char (Spinner.char ~spin_every:(Time.Span.of_sec 0.5) ~start ~now))
         ; Widget.of_string " "]
     in
@@ -82,8 +84,8 @@ let handle_line (m:Model.t) line =
   in
   { m with items = Map.set m.items ~key:lnum ~data:line }
 
-let handle_closed (m:Model.t) =
-  { m with closed = true }
+let handle_closed (m:Model.t) time =
+  { m with closed_at = Some time }
 
 let set_dim (m:Model.t) dim =
   { m with dim }

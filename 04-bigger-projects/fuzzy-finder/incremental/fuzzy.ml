@@ -1,5 +1,6 @@
 open! Base
 open! Import
+open Incr.Let_syntax
 
 (* TODO: Consider flipping direction to match ordinary fzf behavior *)
 (* TODO: Fix selection: now the last filtered thing is shown, but
@@ -11,53 +12,66 @@ module Model = struct
   type t =
     { items: string Map.M(Int).t
     ; filter: string
-    ; closed: bool
+    ; closed_at: Time.t option
     ; dim: Tty_text.Dimensions.t
     ; start: Time.t
-    }
+    } [@@deriving fields]
 
   let create ~now =
     { items = Map.empty (module Int)
     ; filter = ""
-    ; closed = false
+    ; closed_at = None
     ; dim = { width = 80; height = 40 }
     ; start = now
     }
 
   let matches t =
-    match t.filter with
-    | "" -> t.items
-    | _ ->
-      let pattern = String.Search_pattern.create t.filter in
-      Map.filter t.items ~f:(fun line ->
-          Option.is_some (String.Search_pattern.index pattern ~in_:line))
+    let filter = t >>| filter in
+    let items = t >>| items in
+    match%bind filter with
+    | "" -> items
+    | filter ->
+      let re = Re.compile (Re.str filter) in
+      Incr_map.filter_mapi items ~f:(fun ~key:_ ~data:line ->
+          if Re.execp re line then Some line else None)
 
-  let to_widget t =
+  let widget_and_selected t =
     let open Incr.Let_syntax in
-    let%map t = t in
-    let now = Incr.now () in
     let open Tty_text in
-    let matches = matches t in
+    let dim = t >>| dim in
     let matches_to_display =
+      let%map matches = matches t and dim = dim in
       Map.to_sequence matches
-      |> (fun matches -> Sequence.take matches (t.dim.height - 1))
+      |> (fun matches -> Sequence.take matches (dim.height - 1))
       |> Sequence.map ~f:snd
-      |> Sequence.map ~f:(fun s ->
-          String.sub s ~pos:0 ~len:(Int.min (String.length s) t.dim.width))
       |> Sequence.to_list
     in
-    let prompt = Widget.of_string ("> " ^ t.filter) in
-    let extra_lines = t.dim.height - 1 - List.length matches_to_display in
     let spinner =
-      if t.closed then []
-      else
-        [ Widget.of_string (String.of_char (Spinner.char ~spin_every:(Time.Span.of_sec 0.5) ~start:t.start ~now))
-        ; Widget.of_string " "]
+      let%map t = t and now = Incr.watch_now () in
+      match t.closed_at with
+      | Some closed_at ->
+        [ Widget.of_string (Time.Span.to_string (Time.diff closed_at t.start))
+        ; Widget.of_string " " ]
+      | None ->
+        [ Widget.of_string
+            (String.of_char (Spinner.char ~spin_every:(Time.Span.of_sec 0.5) ~start:t.start ~now))
+        ; Widget.of_string " " ]
     in
-    Widget.vbox
-      (List.init extra_lines ~f:(fun _ -> Widget.of_string "")
-       @ List.map matches_to_display ~f:Widget.of_string
-       @ [ Widget.hbox (spinner @ [prompt])])
+    let%map matches_to_display = matches_to_display
+    and spinner = spinner
+    and filter = t >>| filter
+    and dim = dim
+    in
+    let prompt = Widget.of_string ("> " ^ filter) in
+    let extra_lines = dim.height - 1 - List.length matches_to_display in
+    let selected = List.hd matches_to_display in
+    let widget =
+      Widget.vbox
+        (List.init extra_lines ~f:(fun _ -> Widget.of_string "")
+         @ List.map matches_to_display ~f:Widget.of_string
+         @ [ Widget.hbox (spinner @ [prompt])])
+    in
+    (widget, selected)
 end
 
 module Action = struct
@@ -87,8 +101,8 @@ let handle_line (m:Model.t) line =
   in
   { m with items = Map.set m.items ~key:lnum ~data:line }
 
-let handle_closed (m:Model.t) =
-  { m with closed = true }
+let handle_closed (m:Model.t) time =
+  { m with closed_at = Some time }
 
 let set_dim (m:Model.t) dim =
   { m with dim }

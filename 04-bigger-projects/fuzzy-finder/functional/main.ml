@@ -12,7 +12,7 @@ let run user_input tty_text ~start =
         model_ref := Fuzzy.handle_line !model_ref line));
   upon (Reader.close_finished stdin) (fun () ->
       dirty := true;
-      model_ref := Fuzzy.handle_closed !model_ref);
+      model_ref := Fuzzy.handle_closed !model_ref (Time.now ()));
   don't_wait_for (
     Pipe.iter_without_pushback user_input ~f:(fun input ->
         dirty := true;

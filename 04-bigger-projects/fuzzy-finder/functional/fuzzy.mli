@@ -1,4 +1,5 @@
 open Base
+open Import
 
 module Model : sig
   type t
@@ -30,7 +31,7 @@ val handle_user_input : Model.t -> Tty_text.User_input.t -> Model.t * Action.t o
 val handle_line : Model.t -> string -> Model.t
 
 (** Handles the completion of the input stream being analyzed *)
-val handle_closed : Model.t -> Model.t
+val handle_closed : Model.t -> Time.t -> Model.t
 
 (** Inform the model as to the dimensions of the screen *)
 val set_dim : Model.t -> Tty_text.Dimensions.t -> Model.t

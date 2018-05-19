@@ -2,20 +2,29 @@ open Core
 open Import
 open Async
 
-
 let run user_input tty_text =
   let (!) = Incr.Var.value in
   let (:=) = Incr.Var.set in
   let now = Time.now () in
   let stdin = force Reader.stdin in
   let model_v = Incr.Var.create (Fuzzy.Model.create ~now) in
-  let widget = Fuzzy.Model.to_widget (Incr.Var.watch model_v) in
+  let widget_and_selected = Fuzzy.Model.widget_and_selected (Incr.Var.watch model_v) in
   let finished = Ivar.create () in
   don't_wait_for (
-    Pipe.iter_without_pushback (Reader.lines stdin) ~f:(fun line ->
-        model_v := Fuzzy.handle_line !model_v line));
+    Pipe.iter' (Reader.lines stdin) ~f:(fun lines ->
+        Queue.iter lines ~f:(fun line ->
+            model_v := Fuzzy.handle_line !model_v line);
+        Deferred.unit));
   upon (Reader.close_finished stdin) (fun () ->
-      model_v := Fuzzy.handle_closed !model_v);
+      model_v := Fuzzy.handle_closed !model_v (Incr.now ()));
+  let widget_to_render = ref None in
+  let last_selected = ref None in
+  Incr.Observer.on_update_exn (Incr.observe widget_and_selected)
+    ~f:(function
+        | Initialized (widget,selected) | Changed (_, (widget,selected)) ->
+          Ref.(widget_to_render := Some widget;
+               last_selected := selected)
+        | Invalidated -> assert false);
   don't_wait_for (
     Pipe.iter_without_pushback user_input ~f:(fun input ->
         let (model,action) = Fuzzy.handle_user_input !model_v input in
@@ -25,18 +34,8 @@ let run user_input tty_text =
         | Some Exit ->
           Ivar.fill finished None
         | Some Exit_and_print ->
-          let matches = Fuzzy.Model.matches !model_v in
-          match Map.min_elt matches with
-          | None ->
-            Ivar.fill finished None
-          | Some (_,line) ->
-            Ivar.fill finished (Some line)));
+          Ivar.fill finished Ref.(!last_selected)));
   let finished = Ivar.read finished in
-  let widget_to_render = ref None in
-  Incr.Observer.on_update_exn (Incr.observe widget)
-    ~f:(function
-        | Initialized widget | Changed (_, widget) -> Ref.(widget_to_render := Some widget)
-        | Invalidated -> assert false);
   Clock.every' (sec 0.1) ~stop:(Deferred.ignore finished)
     (fun () ->
        let dim = Tty_text.dimensions tty_text in

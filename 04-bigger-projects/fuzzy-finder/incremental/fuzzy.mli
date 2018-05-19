@@ -7,10 +7,11 @@ module Model : sig
   (** Returns the [empty] model, with no data  *)
   val create : now:Time.t -> t
 
-  (** Returns the set of lines that currently match *)
-  val matches : t -> string Map.M(Int).t
-
-  val to_widget : t Incr.t -> Tty_text.Widget.t Incr.t
+  (** Incrementally returns the widget to display and the currently
+     selected line, if any. *)
+  val widget_and_selected
+    :  t Incr.t
+    -> (Tty_text.Widget.t * string option) Incr.t
 end
 
 (** The set of things that the application can ask to do. *)
@@ -27,7 +28,7 @@ val handle_user_input : Model.t -> Tty_text.User_input.t -> Model.t * Action.t o
 val handle_line : Model.t -> string -> Model.t
 
 (** Handles the completion of the input stream being analyzed *)
-val handle_closed : Model.t -> Model.t
+val handle_closed : Model.t -> Time.t -> Model.t
 
 (** Inform the model as to the dimensions of the screen *)
 val set_dim : Model.t -> Tty_text.Dimensions.t -> Model.t
