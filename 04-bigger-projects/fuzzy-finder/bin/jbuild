@@ -1,5 +1,5 @@
 (executables (
-  (names (fuzzy))
+  (names (main))
   (libraries (core async tty_text re))
   (preprocess (pps (ppx_jane)))
   (flags (:standard -short-paths))
