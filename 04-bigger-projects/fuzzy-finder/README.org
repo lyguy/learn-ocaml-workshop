@@ -47,55 +47,29 @@ have two sets of inputs, and two sets of outputs:
 
 * Structure of the tutorial
 
+There are three directories, each containing different stages.
 
-* Tasks
-** How will line editing work?
+- ~01-simple~ is a warm-up. It contains a simple stubbed out
+  command-line program, whose only purpose is to read in and filter a
+  sequence of lines. You need to figure out how to use the ~Re~
+  regular expression library to do your filtering.
 
-The user input is there for you to consume, but there's no actual line
-editor provided.
+- ~02-functional~ contains a skeleton for a fuzzy finder, but right
+  now, the fuzzy finder is missing all of the finding
+  functionality. Your goal is to put that functionality in.
 
-** How you are going to store the data, filtered items, and user input?
+- ~03-incremental~ is about performance. The fuzzy finder we build in
+  the previous section is decent for small inputs, but starts falling
+  apart as you get to bigger inputs. That's because the style of that
+  implementation leads you to redo the full computation over and over.
+  In this exercise, you'll use Incremental to speed that up.
 
-There are no data structures defined, that's up to you.
+There are also some other important directories.
 
-** How will the user input match what comes from stdin?
+- ~tty_text~ contains a small TTY library, built for this
+  example. Some extensions can be done by extending this library.
 
-A simple check if the input string is present in any of the input is
-probably reasonable to start with
-
-Here are some example commands that you may find useful for testing
-your finder:
-
-#+BEGIN_EXAMPLE
-  seq 0 10000 | ./_build/default/fuzzy.exe
-#+END_EXAMPLE
-
-#+BEGIN_EXAMPLE
-  seq 0 7 100000 | ./_build/default/fuzzy.exe
-#+END_EXAMPLE
-
-** Add colors
-The [[https://en.wikipedia.org/wiki/ANSI_escape_code][Wikipedia]] article on ANSI escape codes explains how to color
-things. This would allow you to highlight the current selection, for
-example.
-
-** Process arrow keys
-
-The Tty_text module provides up-arrow and down-arrow keys. Can you use
-those for selecting something other than the first match?
-
-** Add more diagnostic info
-
-Add output for
-- How many items the program knows about
-- How many items match the current search
-
-** Fuzzier finding
-
-Instead of just looking for a substring, consider having a match be
-any string that has the typed strings in some order.
-
-** Output sorting
-
-Try to come up with a good way to sort the output. Is lexicographic
-string comparison enough?
+- ~solutions~ contains reasonable solutions to the functional and
+  imperative sections, though they're hardly complete. In any case, if
+  you get stumped, you might want to take a look at htem to see how we
+  solved the problems.
