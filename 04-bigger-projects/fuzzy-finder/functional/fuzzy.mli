@@ -5,16 +5,12 @@ module Model : sig
   type t
 
   (** Returns the [empty] model, with no data  *)
-  val empty : t
+  val create : now:Time.t -> t
 
-  (** Returns the set of lines that currently match *)
-  val matches : t -> string Map.M(Int).t
-
-  val to_widget
+  val widget_and_selected
     :  t
-    -> start:Core_kernel.Time.t
-    -> now:Core_kernel.Time.t
-    -> Tty_text.Widget.t
+    -> now:Time.t
+    -> Tty_text.Widget.t * string option
 end
 
 (** The set of things that the application can ask to do. *)

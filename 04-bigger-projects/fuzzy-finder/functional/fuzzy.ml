@@ -7,32 +7,38 @@ module Model = struct
     ; filter: string
     ; closed_at: Time.t option
     ; dim: Tty_text.Dimensions.t
+    ; start: Time.t
     }
 
-  let empty =
+  let create ~now =
     { items = Map.empty (module Int)
     ; filter = ""
     ; closed_at = None
     ; dim = { width = 80; height = 40 }
+    ; start = now
     }
 
   let matches t =
     let re = Re.compile (Re.str t.filter) in
     Map.filter t.items ~f:(fun line -> Re.execp re line)
 
-  let to_widget t ~start ~now =
+  let widget_and_selected t ~now =
     let open Tty_text in
     let matches = matches t in
     let matches_to_display =
       Map.to_sequence matches
       |> (fun matches -> Sequence.take matches (t.dim.height - 1))
       |> Sequence.map ~f:snd
-      |> Sequence.map ~f:(fun s ->
-          String.sub s ~pos:0 ~len:(Int.min (String.length s) t.dim.width))
       |> Sequence.to_list
+    in
+    let selected = List.hd matches_to_display in
+    let matches_to_display =
+      List.map matches_to_display ~f:(fun s ->
+          String.sub s ~pos:0 ~len:(Int.min (String.length s) t.dim.width))
     in
     let prompt = Widget.of_string ("> " ^ t.filter) in
     let extra_lines = t.dim.height - 1 - List.length matches_to_display in
+    let start = t.start in
     let spinner =
       match t.closed_at with
       | Some closed_at ->
@@ -42,10 +48,13 @@ module Model = struct
         [ Widget.of_string (String.of_char (Spinner.char ~spin_every:(Time.Span.of_sec 0.5) ~start ~now))
         ; Widget.of_string " "]
     in
-    Widget.vbox
-      (List.init extra_lines ~f:(fun _ -> Widget.of_string "")
-       @ List.map matches_to_display ~f:Widget.of_string
-       @ [ Widget.hbox (spinner @ [prompt])])
+    let widget =
+      Widget.vbox
+        (List.init extra_lines ~f:(fun _ -> Widget.of_string "")
+         @ List.map matches_to_display ~f:Widget.of_string
+         @ [ Widget.hbox (spinner @ [prompt])])
+    in
+    (widget, selected)
 end
 
 module Action = struct

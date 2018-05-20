@@ -1,1 +1,1 @@
-module Time = Core_kernel.Time
+module Time = Core.Time
