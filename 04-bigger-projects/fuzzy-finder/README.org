@@ -45,6 +45,9 @@ have two sets of inputs, and two sets of outputs:
 - Inputs : stdin, read from ~/dev/tty~
 - Outputs: stdout, write to ~/dev/tty~
 
+* Structure of the tutorial
+
+
 * Tasks
 ** How will line editing work?
 
