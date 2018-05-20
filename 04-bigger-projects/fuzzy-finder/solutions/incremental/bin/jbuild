@@ -1,0 +1,6 @@
+(executables (
+  (names (main))
+  (libraries (incremental_fzf_solution))
+  (preprocess (pps (ppx_jane)))
+  (flags (:standard -short-paths))
+))
