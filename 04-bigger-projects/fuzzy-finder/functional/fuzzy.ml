@@ -22,6 +22,20 @@ module Model = struct
     let re = Re.compile (Re.str t.filter) in
     Map.filter t.items ~f:(fun line -> Re.execp re line)
 
+  let spin ~start ~spin_every ~now =
+    let elapsed = Time.diff now start in
+    let phase =
+      Time.Span.(elapsed // spin_every)
+      |> Int.of_float
+      |> (fun x -> x % 4)
+    in
+    match phase with
+    | 0 -> "|"
+    | 1 -> "/"
+    | 2 -> "-"
+    | 3 -> "\\"
+    | _ -> assert false
+
   let widget_and_selected t ~now =
     let open Tty_text in
     let matches = matches t in
@@ -45,7 +59,7 @@ module Model = struct
         [ Widget.of_string (Time.Span.to_string (Time.diff closed_at start))
         ; Widget.of_string " "]
       | None ->
-        [ Widget.of_string (String.of_char (Spinner.char ~spin_every:(Time.Span.of_sec 0.5) ~start ~now))
+        [ Widget.of_string (spin ~spin_every:(Time.Span.of_sec 0.5) ~start ~now)
         ; Widget.of_string " "]
     in
     let widget =

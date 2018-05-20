@@ -25,6 +25,20 @@ module Model = struct
     Incr_map.filter_mapi items ~f:(fun ~key:_ ~data:line ->
         if Re.execp re line then Some line else None)
 
+  let spin ~start ~spin_every ~now =
+    let elapsed = Time.diff now start in
+    let phase =
+      Time.Span.(elapsed // spin_every)
+      |> Int.of_float
+      |> (fun x -> x % 4)
+    in
+    match phase with
+    | 0 -> "|"
+    | 1 -> "/"
+    | 2 -> "-"
+    | 3 -> "\\"
+    | _ -> assert false
+
   let widget_and_selected t =
     let open Incr.Let_syntax in
     let module Widget = Tty_text.Widget in
@@ -45,8 +59,7 @@ module Model = struct
         [ Widget.of_string (Time.Span.to_string (Time.diff closed_at t.start))
         ; Widget.of_string " " ]
       | None ->
-        [ Widget.of_string
-            (String.of_char (Spinner.char ~spin_every:(Time.Span.of_sec 0.5) ~start:t.start ~now))
+        [ Widget.of_string (spin ~spin_every:(Time.Span.of_sec 0.5) ~start:t.start ~now)
         ; Widget.of_string " " ]
     in
     let%map matches_to_display = matches_to_display
