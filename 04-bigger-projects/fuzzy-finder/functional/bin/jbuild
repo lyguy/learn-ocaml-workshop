@@ -1,6 +1,6 @@
 (executables (
   (names (main))
-  (libraries (core async tty_text re))
+  (libraries (core async functional_fzf))
   (preprocess (pps (ppx_jane)))
   (flags (:standard -short-paths))
 ))

@@ -58,5 +58,3 @@ let command =
        | Ok (Some output) ->
          print_endline output;
          Writer.flushed (force Writer.stdout))
-
-let () = Command.run command
