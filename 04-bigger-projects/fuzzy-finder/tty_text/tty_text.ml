@@ -260,21 +260,34 @@ module Widget = struct
   let hbox ts = Hbox ts
   let vbox ts = Vbox ts
 
-  let render elts writer =
+  let to_string t =
+    let module Block = Textutils.Text_block in
     let rec process = function
-      | String x -> Writer.writef writer "%s" x
-      | Hbox xs ->
-        List.iter xs ~f:process
-      | Vbox xs ->
-        xs
-        |> List.map ~f:(fun x -> (fun () -> process x))
-        |> List.intersperse ~sep:(fun () ->
-            Writer.writef writer !"%{Action}%{Action}" Erase_to_end_of_line Next_line)
-        |> List.iter ~f:(fun f -> f ())
+      | String x -> Block.text x
+      | Hbox xs -> Block.hcat ~sep:(Block.text " ") (List.map ~f:process xs)
+      | Vbox xs -> Block.vcat (List.map ~f:process xs)
     in
-    Writer.writef writer !"%{Action}" Move_cursor_to_home;
-    process elts;
-    Writer.writef writer !"%{Action}" Erase_to_end_of_line;
+    Block.render (process t)
+
+  let%expect_test _ =
+    let p t = print_endline (to_string t) in
+    p (Hbox
+         [ Vbox [String "foo"; String "bar bar"]
+         ; String "Whatever" ]);
+    [%expect{|
+      foo     Whatever
+      bar bar |}]
+
+  let render t writer =
+    let string = to_string t in
+    let lines = String.split_lines string in
+    let act action = Writer.write writer (Action.to_string action) in
+    act Move_cursor_to_home;
+    List.iter lines ~f:(fun line ->
+        Writer.write writer line;
+        act Erase_to_end_of_line;
+        act Next_line);
+    act Erase_to_end_of_line;
     Writer.flushed writer
 end
 

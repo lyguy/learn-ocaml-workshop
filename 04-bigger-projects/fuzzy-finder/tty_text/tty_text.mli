@@ -14,6 +14,8 @@ type t
 module Widget : sig
   type t
 
+  val to_string : t -> string
+
   val of_char : char -> t
 
   val of_string : string -> t
