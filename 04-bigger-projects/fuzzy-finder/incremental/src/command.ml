@@ -45,7 +45,6 @@ let run user_input tty_text =
          Ref.(widget_to_render := None);
          Tty_text.render tty_text widget);
   finished
-;;
 
 let command =
   let open Command.Let_syntax in
@@ -68,6 +67,3 @@ let command =
        | Ok (Some output) ->
          print_endline output;
          Writer.flushed (force Writer.stdout))
-
-let () =
-  Command.run command
