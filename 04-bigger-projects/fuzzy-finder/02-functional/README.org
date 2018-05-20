@@ -1,0 +1,90 @@
+#+TITLE: A functional fuzzy finder
+
+This section of the tutorial is all about building a fuzzy finder in a
+functional style. Note that this implementation won't be especially
+performant, but it will be fast enough for medium-sized inputs.
+
+You'll notice there are three subdirectories.
+
+- ~src~ contains the vast majority of the source code for the command
+  line tool, packaged up as a library. We package it as a library to
+  make testing easier.
+- ~bin~ contains a ~main.ml~ that is for building the executable.
+- ~test~ is for writing tests against the library we built.
+
+* Running the example code
+
+The example starts out in a working state, but without much
+functionality.  You can invoke it as follows to see what it does:
+
+#+BEGIN_EXAMPLE
+jbuilder build bin/main.exe --dev
+seq 0 1000 | jbuilder exec ./bin/main.exe
+#+END_EXAMPLE
+
+You can run all the tests by writing:
+
+#+BEGIN_EXAMPLE
+jbuilder runtest --dev
+#+END_EXAMPLE
+
+For the expect tests, you can accept updates to the tests by running
+this:
+
+#+BEGIN_EXAMPLE
+jbuilder promote
+#+END_EXAMPLE
+
+Or by adding ~--auto-promote~ to the ~runtest~ invocation.
+
+* Tasks
+** How will line editing work?
+
+The user input is there for you to consume, but there's no actual line
+editor provided.
+
+** How you are going to store the data, filtered items, and user input?
+
+There are no data structures defined, that's up to you.
+
+** How will the user input match what comes from stdin?
+
+A simple check if the input string is present in any of the input is
+probably reasonable to start with
+
+Here are some example commands that you may find useful for testing
+your finder:
+
+#+BEGIN_EXAMPLE
+  seq 0 10000 | ./_build/default/fuzzy.exe
+#+END_EXAMPLE
+
+#+BEGIN_EXAMPLE
+  seq 0 7 100000 | ./_build/default/fuzzy.exe
+#+END_EXAMPLE
+
+** Add colors
+The [[https://en.wikipedia.org/wiki/ANSI_escape_code][Wikipedia]] article on ANSI escape codes explains how to color
+things. This would allow you to highlight the current selection, for
+example.
+
+** Process arrow keys
+
+The Tty_text module provides up-arrow and down-arrow keys. Can you use
+those for selecting something other than the first match?
+
+** Add more diagnostic info
+
+Add output for
+- How many items the program knows about
+- How many items match the current search
+
+** Fuzzier finding
+
+Instead of just looking for a substring, consider having a match be
+any string that has the typed strings in some order.
+
+** Output sorting
+
+Try to come up with a good way to sort the output. Is lexicographic
+string comparison enough?
