@@ -38,53 +38,54 @@ jbuilder promote
 Or by adding ~--auto-promote~ to the ~runtest~ invocation.
 
 * Tasks
-** How will line editing work?
 
-The user input is there for you to consume, but there's no actual line
-editor provided.
+Here are steps you can do to turn this into a useful fuzzy finder.
+You're not likely to get all of them, but you should see how far you
+can get during the tutorial!
 
-** How you are going to store the data, filtered items, and user input?
+** Track time for reading stdin
 
-There are no data structures defined, that's up to you.
+The reading loop will send a ~Closed~ event when it's done reading
+stdin. Use that to print out the time it takes from startup until
+reading is done.
 
-** How will the user input match what comes from stdin?
+** Accept filter from user
 
-A simple check if the input string is present in any of the input is
-probably reasonable to start with
+You can accept a filter string from the user interactively by using
+the incoming characters from the stream of user input. Use this to
+filter down to a subset of messages.
 
-Here are some example commands that you may find useful for testing
-your finder:
+This requires doing some basic line-editing, using the user input to
+add or remove characters from the filter, and then displaying what
+they've typed at a prompt you create.
 
-#+BEGIN_EXAMPLE
-  seq 0 10000 | ./_build/default/fuzzy.exe
-#+END_EXAMPLE
+At this point, you should simply return the first filtered message as
+the selection.
 
-#+BEGIN_EXAMPLE
-  seq 0 7 100000 | ./_build/default/fuzzy.exe
-#+END_EXAMPLE
+** Display filtered messages to the user
 
-** Add colors
-The [[https://en.wikipedia.org/wiki/ANSI_escape_code][Wikipedia]] article on ANSI escape codes explains how to color
-things. This would allow you to highlight the current selection, for
-example.
+You need to use the ~Widget~ module to create a display of the lines
+that match. You'll need to also keep track of the dimensions of the
+screen to only render enough lines to fit on screen, and to truncate
+overly-long lines.
 
-** Process arrow keys
+** Use arrow keys for choosing the selection
 
-The Tty_text module provides up-arrow and down-arrow keys. Can you use
-those for selecting something other than the first match?
-
-** Add more diagnostic info
-
-Add output for
-- How many items the program knows about
-- How many items match the current search
+The real fzf lets you use the arrow keys to select from which of the
+on-screen lines you actually want to select. This requires both adding
+a little indicator of which line is currently selected, and
+interpreting the arrow keys to move that indicator up and down.
+Finally, you have to make sure to actually return the indicated line
+as the current selection.
 
 ** Fuzzier finding
 
 Instead of just looking for a substring, consider having a match be
 any string that has the typed strings in some order.
 
-** Output sorting
+** Add colors
 
-Try to come up with a good way to sort the output. Is lexicographic
-string comparison enough?
+This requires extending the ~tty_text~ library. The [[https://en.wikipedia.org/wiki/ANSI_escape_code][Wikipedia]] article
+on ANSI escape codes explains how to color things. This would allow
+you to highlight the current selection, or the subset of the filtered
+lines that match the filter.
