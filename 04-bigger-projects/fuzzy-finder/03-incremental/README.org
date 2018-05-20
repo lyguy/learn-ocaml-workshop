@@ -1,0 +1,95 @@
+#+TITLE: Incremental Fuzzy Finder
+
+The problem with the functional fuzzy finder we built in section 2 is
+that it's slow.  The reason for that is simple enough: the style of
+the implementation we used essentially required us to rerun the filter
+on the entire input every time we redisplayed.
+
+This is obviously silly, and among other things, it means that even
+when nothing is happening, the application is still using a bunch of
+CPU, since it's continuing to refresh ten times a second.
+
+We could make this a little better with some simple changes to avoid
+recomputing when nothing has happened, but that isn't enough. That's
+because the process of reading in data would still be slow, since we'd
+rerun the filter on every line on every render during the period where
+we're reading in more data.
+
+Instead, we're going to try to build a more truly incremnental
+version, that in particular can do the necssary incrementally as
+inputs are added.  We're going to use the Incremental ilbrary to allow
+us to do this while keeping things in a simple, functional style.
+
+* How to use Incremental
+
+The core of incremental is a little language of combinators which,
+combined with syntactic sugar, allows you to structure your
+computation as a graph.
+
+You initialize Incremental by running a functor to create an instance
+of Incremental (there's mutable state that stores the computation
+graph, so we don't necessarily want to share across applications), and
+open the ~Let_syntax~ module which gives us both some infix operators
+as well as the ability to use some specialized syntax extensions.
+
+#+BEGIN_SRC ocaml
+module Incr = Incremental_lib.Incremental.Make ()
+open Incr.Let_syntax
+#+END_SRC
+
+Inputs to an incremental computation are called variables, and they
+can be created as follows.
+
+#+BEGIN_SRC ocaml
+let x_v = Incr.Var.create 10
+let y_v = Incr.Var.create 100
+let z_v = Incr.Var.create 3
+#+END_SRC
+
+We can then create ordinary ~Incr.t~ nodes by using ~Incr.Var.watch~.
+
+#+BEGIN_SRC ocaml
+let x = Incr.Var.watch x_v
+let y = Incr.Var.watch y_v
+let z = Incr.Var.watch z_v
+#+END_SRC
+
+Now we can build a little computation out of this, say, by adding
+the numbers together.
+
+#+BEGIN_SRC ocaml
+let m = Incr.map2 ~f:(+) x (Incr.map2 ~f:(+) y z)
+#+END_SRC
+
+This basically builds up a little computation tree, that looks
+something like this:
+
+#+BEGIN_EXAMPLE
+   +
+  / \
+ x  +
+   / \
+  y   z
+#+END_EXAMPLE
+
+We can get the value out of this computation by ~observing~ an
+incremental node, and then calling ~stabilize~ to run the computation.
+
+#+BEGIN_SRC ocaml
+let m_o = Incr.observe m
+let () =
+  Incr.stabilize ();
+  printf "%d\n" (Incr.Observer.value_exn m_o)
+#+END_SRC
+
+The point of this is that if some of the inputs are changed, only the
+relevant subset of the graph needs to be refired.  So, we can write:
+
+#+BEGIN_SRC ocaml
+let () =
+  Incr.Var.set x_v 8;
+  Incr.stabilize ();
+  printf "%d\n" (Incr.Observer.value_exn m_o)
+#+END_SRC
+
+And ~m_o~ is updated without having to recompute the sum of ~y~ and ~z~.
