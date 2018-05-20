@@ -267,7 +267,7 @@ module Widget = struct
       | Hbox xs -> Block.hcat ~sep:(Block.text " ") (List.map ~f:process xs)
       | Vbox xs -> Block.vcat (List.map ~f:process xs)
     in
-    Block.render (process t) |> String.rstrip
+    Block.render (process t)
 
   let%expect_test _ =
     let p t = printf "\n%s" (to_string t) in
@@ -285,11 +285,19 @@ bar bar |
     let lines = String.split_lines string in
     let act action = Writer.write writer (Action.to_string action) in
     act Move_cursor_to_home;
-    List.iter lines ~f:(fun line ->
+    let rec loop lines =
+      match lines with
+      | [] -> ()
+      | [line] ->
+        Writer.write writer line;
+        act Erase_to_end_of_line
+      | line :: tl ->
         Writer.write writer line;
         act Erase_to_end_of_line;
-        act Next_line);
-    act Erase_to_end_of_line;
+        act Next_line;
+        loop tl
+    in
+    loop lines;
     Writer.flushed writer
 end
 
