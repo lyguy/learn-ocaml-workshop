@@ -140,3 +140,74 @@ let positive_entries map =
 As the input map changes, this code will only have to do work
 proportional to the number of additions and deletions from the map,
 rather than having to recompute the entire transformation.
+
+* Dynamic computations with bind
+
+Another useful operator is ~Incr.bind~.  The key way that bind is
+different from map is that the right-hand-side of the bind can itself
+contain an incremental computation. This means that every time the
+bind fires, you can create a new incremental computation.
+
+This is very useful if you want to create a filtered map where the
+filter can change dynamically.  Here's an example.
+
+#+BEGIN_SRC ocaml
+let changing_filter test map =
+  let%bind test = test in
+  Incr_map.filter_mapi map ~f:(fun ~key:_ ~data ->
+      if test data then Some data else None)
+#+END_SRC
+
+The function defined above takes two arguments, both incremental. When
+~map~ changes on its own, then the changes are processed
+incrementally.  When ~test~ changes, ~Incr_map.filter_mapi~ is re-run,
+which means the whole computation is done from scratch, with the new
+test function.
+
+We can still do this if both the map and the test function start out
+in a single data structure. Here's an example.
+
+#+BEGIN_SRC ocaml
+module Data = struct
+  type t = { test : int -> bool
+           ; map : int Map.M(String).t
+           } [@@deriving fields]
+end
+
+let filter t =
+  let map = t >>| Data.map in
+  let%bind test = t >>| Data.test in
+  Incr_map.filter_mapi map ~f:(fun ~key:_ ~data ->
+      if test data then Some data else None)
+#+END_SRC
+
+Note that we use ~>>|~, which is an infix version of the ~Incr.map~
+operator.  This allows us to concisely project out fields from the
+overall record.  Note that it's important to do that, rather than just
+binding on ~t~ itself, as follows:
+
+#+BEGIN_SRC ocaml
+let filter t =
+  let map = t >>| Data.map in
+  let%bind t = t in
+  let test = t.test in
+  Incr_map.filter_mapi map ~f:(fun ~key:_ ~data ->
+      if test data then Some data else None)
+#+END_SRC
+
+The above code is not incremental at all, since every time ~t~
+changes, everything after the bind is redone, and ~t~ changes every
+time either ~map~ or ~test~ changes.
+
+* Fixing the fuzzy finder
+
+The fuzzy finder as it works right now uses incremental types, but
+doesn't really perform any better. That's because the key function,
+~Fuzzy.Model.widget_and_selected~ recomputes everything every time
+either the clock ticks or anything about the model changes. (the clock
+is used for the spinner)
+
+Your goal is to use the functionality described above to refine the
+incremental calculation, making the filtering incremental, and not
+recomputing everything anytime one indivdiual piece changes, like the
+clock.
