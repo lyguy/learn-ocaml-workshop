@@ -270,13 +270,15 @@ module Widget = struct
     Block.render (process t)
 
   let%expect_test _ =
-    let p t = print_endline (to_string t) in
+    let p t = printf "\n%s" (to_string t) in
     p (Hbox
          [ Vbox [String "foo"; String "bar bar"]
+         ; Vbox [String "|"; String "|"]
          ; String "Whatever" ]);
-    [%expect{|
-      foo     Whatever
-      bar bar |}]
+    [%expect_exact {|
+foo     | Whatever
+bar bar |
+|}]
 
   let render t writer =
     let string = to_string t in
