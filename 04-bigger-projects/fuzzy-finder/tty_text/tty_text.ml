@@ -267,7 +267,7 @@ module Widget = struct
       | Hbox xs -> Block.hcat ~sep:(Block.text " ") (List.map ~f:process xs)
       | Vbox xs -> Block.vcat (List.map ~f:process xs)
     in
-    Block.render (process t)
+    Block.render (process t) |> String.rstrip
 
   let%expect_test _ =
     let p t = printf "\n%s" (to_string t) in

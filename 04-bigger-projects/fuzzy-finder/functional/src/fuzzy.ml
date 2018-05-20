@@ -31,8 +31,13 @@ module Action = struct
     | Exit_and_print
 end
 
-let handle_user_input (m:Model.t) _input =
-  (m,None)
+let handle_user_input (m:Model.t) (input:Tty_text.User_input.t) =
+  let action =
+    match input with
+    | Ctrl_c -> Some Action.Exit
+    | _ -> None
+  in
+  (m,action)
 
 let handle_line (m:Model.t) line : Model.t =
   let lnum =
