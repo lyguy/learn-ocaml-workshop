@@ -9,7 +9,7 @@ module Model = struct
     ; closed_at: Time.t option
     ; dim: Tty_text.Dimensions.t
     ; start: Time.t
-    } [@@deriving fields]
+    }
 
   let create ~now =
     { items = Map.empty (module Int)
@@ -19,11 +19,9 @@ module Model = struct
     ; start = now
     }
 
-  let matches ~filter ~items =
-    let%bind filter = filter in
-    let re = Re.compile (Re.str filter) in
-    Incr_map.filter_mapi items ~f:(fun ~key:_ ~data:line ->
-        if Re.execp re line then Some line else None)
+  let matches t =
+    let re = Re.compile (Re.str t.filter) in
+    Map.filter t.items ~f:(fun line -> Re.execp re line)
 
   let spin ~start ~spin_every ~now =
     let elapsed = Time.diff now start in
@@ -40,39 +38,31 @@ module Model = struct
     | _ -> assert false
 
   let widget_and_selected t =
-    let open Incr.Let_syntax in
-    let module Widget = Tty_text.Widget in
-    let dim = t >>| dim in
-    let filter = t >>| filter in
-    let items = t >>| items in
+    let open Tty_text in
+    let%map t = t and now = Incr.watch_now () in
+    let matches = matches t in
     let matches_to_display =
-      let%map matches = matches ~filter ~items and dim = dim in
       Map.to_sequence matches
-      |> (fun matches -> Sequence.take matches (dim.height - 1))
+      |> (fun matches -> Sequence.take matches (t.dim.height - 1))
       |> Sequence.map ~f:snd
       |> Sequence.to_list
     in
-    let spinner =
-      let%map t = t and now = Incr.watch_now () in
-      match t.closed_at with
-      | Some closed_at ->
-        [ Widget.of_string (Time.Span.to_string (Time.diff closed_at t.start))
-        ; Widget.of_string " " ]
-      | None ->
-        [ Widget.of_string (spin ~spin_every:(Time.Span.of_sec 0.5) ~start:t.start ~now)
-        ; Widget.of_string " " ]
-    in
-    let%map matches_to_display = matches_to_display
-    and spinner = spinner
-    and filter = filter
-    and dim = dim
-    in
-    let prompt = Widget.of_string ("> " ^ filter) in
-    let extra_lines = dim.height - 1 - List.length matches_to_display in
     let selected = List.hd matches_to_display in
     let matches_to_display =
       List.map matches_to_display ~f:(fun s ->
-          String.sub s ~pos:0 ~len:(min dim.width (String.length s)))
+          String.sub s ~pos:0 ~len:(Int.min (String.length s) t.dim.width))
+    in
+    let prompt = Widget.of_string ("> " ^ t.filter) in
+    let extra_lines = t.dim.height - 1 - List.length matches_to_display in
+    let start = t.start in
+    let spinner =
+      match t.closed_at with
+      | Some closed_at ->
+        [ Widget.of_string (Time.Span.to_string (Time.diff closed_at start))
+        ; Widget.of_string " "]
+      | None ->
+        [ Widget.of_string (spin ~spin_every:(Time.Span.of_sec 0.5) ~start ~now)
+        ; Widget.of_string " "]
     in
     let widget =
       Widget.vbox
