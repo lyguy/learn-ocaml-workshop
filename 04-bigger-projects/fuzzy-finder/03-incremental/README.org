@@ -93,3 +93,20 @@ let () =
 #+END_SRC
 
 And ~m_o~ is updated without having to recompute the sum of ~y~ and ~z~.
+
+* Prettier syntax with ~Let_syntax~
+
+We can use ~Let_syntax~ to make some of these things easier to
+read. Instead of this:
+
+#+BEGIN_SRC ocaml
+Incr.map2 <expr1> <expr2> ~f:(fun x y -> <expr3>)
+#+END_SRC
+
+We can write:
+
+#+BEGIN_SRC ocaml
+let%map x = expr1 and y = expr2 in <expr3>
+#+END_SRC
+
+This is often a clearer syntax, and it's recommended as the default.
