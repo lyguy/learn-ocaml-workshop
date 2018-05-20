@@ -106,7 +106,37 @@ Incr.map2 <expr1> <expr2> ~f:(fun x y -> <expr3>)
 We can write:
 
 #+BEGIN_SRC ocaml
-let%map x = expr1 and y = expr2 in <expr3>
+let%map x = <expr1> and y = <expr2> in <expr3>
 #+END_SRC
 
 This is often a clearer syntax, and it's recommended as the default.
+
+* Bigger computations with ~Incr_map~
+
+Incremental maps work great if your optimizations can be easily
+expressed by laying out a static computation graph, and then only
+refiring a subset of the graph.  But one case that this doesn't work
+so well for is if you have one big data structure that you'd like to
+analyze incrementally.
+
+If that data structure is a map, then you can use ~Incr_map~, which
+has incremental computations that work efficiently on maps, by taking
+advantage under the covers of the fact that maps can be diffed
+efficiently.  We can set it up as follows.
+
+#+BEGIN_SRC ocaml
+module Incr_map = Incr_map.Make (Incr)
+#+END_SRC
+
+Here's an example of a function that takes a map with integers as
+data, and filters down to just the positve elements.
+
+#+BEGIN_SRC ocaml
+let positive_entries map =
+  Incr_map.filter_mapi map ~f:(fun ~key:_ ~data ->
+      if data > 0 then Some data else None)
+#+END_SRC
+
+As the input map changes, this code will only have to do work
+proportional to the number of additions and deletions from the map,
+rather than having to recompute the entire transformation.
