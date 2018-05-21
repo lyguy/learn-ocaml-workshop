@@ -2,6 +2,14 @@ open! Core
 open! Async
 
 let run _filter =
+  let pipe = Reader.lines (force Reader.stdin) in
+  let handle_line line =
+    print_endline line;
+    Writer.flushed (force Writer.stdout)
+  in
+  Pipe.iter pipe ~f:handle_line
+
+let run _filter =
   Pipe.iter (Reader.lines (force Reader.stdin)) ~f:(fun line ->
       (* EXERCISE: Filter down to the matching lines.
 

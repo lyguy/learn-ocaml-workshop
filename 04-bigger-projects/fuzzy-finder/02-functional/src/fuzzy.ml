@@ -6,11 +6,13 @@ module Model = struct
   type t =
     { lines: string Map.M(Int).t
     ; start: Time.t
+    ; closed_at: Time.t option
     }
 
   let create ~now =
     { lines = Map.empty (module Int)
     ; start = now
+    ; closed_at = None
     }
 
   let widget_and_selected t ~now =
@@ -47,8 +49,8 @@ let handle_line (m:Model.t) line : Model.t =
   in
   { m with lines = Map.set m.lines ~key:lnum ~data:line }
 
-let handle_closed (m:Model.t) _ =
-  m
+let handle_closed (m:Model.t) time =
+  { m with closed_at = Some time }
 
 let set_dim (m:Model.t) _ =
   m
