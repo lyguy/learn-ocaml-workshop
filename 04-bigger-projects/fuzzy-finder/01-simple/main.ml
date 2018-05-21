@@ -12,7 +12,7 @@ let run _filter =
          - Re.execp
       *)
       print_endline line;
-      Deferred.unit)
+      Writer.flushed (force Writer.stdout))
 
 let command =
   let open Command.Let_syntax in
