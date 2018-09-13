@@ -10,6 +10,10 @@ developing in OCaml.
   git submodule update
   #+END_SRC
   See [[https://github.com/janestreet/install-ocaml/blob/master/README.org][README.org in install-ocaml]] for instructions.
+  After finishing this w you'll additionally need to install ~expect_test_helpers_kernel~:
+   #+BEGIN_SRC bash
+   opam install expect_test_helpers_kernel
+  #+END_SRC
 * Exercises
   The [[file:02-exercises][exercises]] directory contains a number of exercises to get you started with
   OCaml. Each one has some expect-tests embedded in it. The workflow is:

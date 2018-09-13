@@ -1,0 +1,9 @@
+;; -*- scheme -*-
+
+
+(library
+ (name problem_3)
+ (libraries base stdio expect_test_helpers_kernel)
+ (inline_tests)
+ (preprocess (pps ppx_jane))
+ (flags (:standard -short-paths)))
