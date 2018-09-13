@@ -1,4 +1,4 @@
-(* Run [jbuilder runtest] to build this file and run test it contains
+(* Run [dune runtest] to build this file and run test it contains
 
    Goal: fix the compilation error, and make the test pass.
 *)
