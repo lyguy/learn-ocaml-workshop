@@ -18,14 +18,14 @@ The example starts out in a working state, but without much
 functionality.  You can invoke it as follows to see what it does:
 
 #+BEGIN_EXAMPLE
-dune build bin/main.exe --dev
+dune build bin/main.exe
 seq 0 1000 | dune exec ./bin/main.exe
 #+END_EXAMPLE
 
 You can run all the tests by writing:
 
 #+BEGIN_EXAMPLE
-dune runtest --dev
+dune runtest
 #+END_EXAMPLE
 
 For the expect tests, you can accept updates to the tests by running
