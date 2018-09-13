@@ -1,0 +1,8 @@
+;; -*- scheme -*-
+
+(library
+  (name incremental_fzf_test_solution)
+  (libraries incremental_fzf_solution expect_test_helpers_kernel)
+  (preprocess (pps ppx_jane))
+  (inline_tests)
+  (flags (:standard -short-paths)))

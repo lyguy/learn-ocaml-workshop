@@ -1,7 +1,0 @@
-(library (
-  (name incremental_fzf_solution)
-  (libraries (core async tty_text incremental incr_map re))
-  (preprocess (pps (ppx_jane)))
-  (inline_tests)
-  (flags (:standard -short-paths))
-))

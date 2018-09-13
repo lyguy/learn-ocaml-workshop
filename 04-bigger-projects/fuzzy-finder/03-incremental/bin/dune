@@ -1,0 +1,7 @@
+;; -*- scheme -*-
+
+(executables
+  (names main)
+  (libraries incremental_fzf)
+  (preprocess (pps ppx_jane))
+  (flags (:standard -short-paths)))

@@ -1,7 +1,0 @@
-(library (
-  (name functional_fzf)
-  (libraries (core async tty_text re))
-  (preprocess (pps (ppx_jane)))
-  (inline_tests)
-  (flags (:standard -short-paths))
-))

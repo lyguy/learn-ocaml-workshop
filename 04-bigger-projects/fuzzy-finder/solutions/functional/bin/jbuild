@@ -1,6 +1,0 @@
-(executables (
-  (names (main))
-  (libraries (core async functional_fzf_solution))
-  (preprocess (pps (ppx_jane)))
-  (flags (:standard -short-paths))
-))

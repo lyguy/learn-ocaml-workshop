@@ -1,6 +1,0 @@
-(library
- ((name tty_text)
-  (libraries (core async textutils))
-  (preprocess (pps (ppx_jane)))
-  (inline_tests)
-  (flags (:standard -short-paths))))
