@@ -1,7 +1,0 @@
-(jbuild_version 1)
-
-(library
- ((name problem_2)
-  (libraries (base stdio))
-  (inline_tests)
-  (preprocess (pps (ppx_jane)))))
