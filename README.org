@@ -4,17 +4,22 @@ This repo contains exercises and build instructions to help you get started
 developing in OCaml.
 
 * Installing build tools and libraries
+  Pull down the ~install-ocaml~ repo using:
+  #+BEGIN_SRC bash
+  git submodule init
+  git submodule update
+  #+END_SRC
   See [[https://github.com/janestreet/install-ocaml/blob/master/README.org][README.org in install-ocaml]] for instructions.
 * Exercises
   The [[file:02-exercises][exercises]] directory contains a number of exercises to get you started with
   OCaml. Each one has some expect-tests embedded in it. The workflow is:
 
   #+BEGIN_SRC bash
-  cd problems/$problem_dir
+  cd 02_exercises/$problem_dir
 
-  jbuilder runtest # builds and runs inline tests
+  dune runtest # builds and runs inline tests
   # Look at test output and compiler errors, edit problem.ml, rerun:
-  jbuilder runtest
+  dune runtest
   #+END_SRC
 * Frogger
   Once you're done with the exercises, you will implement a simplified clone of
