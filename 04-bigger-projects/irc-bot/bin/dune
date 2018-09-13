@@ -1,0 +1,10 @@
+;; -*-scheme-*-
+
+(executables
+ (names bot)
+  (libraries core async)
+  (preprocess (pps ppx_jane)))
+
+(alias
+ (name DEFAULT)
+   (deps bot.exe))

@@ -1,6 +1,5 @@
-all: 
-	jbuilder build @DEFAULT
+all:
+	dune build @DEFAULT
 
 test:
-	jbuilder runtest --dev
-
+	dune runtest
