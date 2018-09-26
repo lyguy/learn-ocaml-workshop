@@ -1,7 +1,7 @@
 ;; -*- scheme -*-
 
 (library
- (name problem_24)
+ (name problem_09)
  (libraries base stdio)
  (inline_tests)
  (preprocess (pps ppx_jane)))

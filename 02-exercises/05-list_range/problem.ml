@@ -1,6 +1,6 @@
 open! Base
 
-(* The previous exercise discussed various list functions, but didn't discuss
+(* Previous exercises introduced lists functions, but didn't discuss
    how to actually build up a list. For this, the cons and append infix operators
    are useful.
 
